@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Never Miss A Match · Adelaide United</title>
+
+  <!-- PWA essentials -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#001F5B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Never Miss A Match">
+
+  <!-- Inline SVG icons as apple-touch-icon (works without a separate PNG) -->
+  <link rel="apple-touch-icon" href="icon-192.svg">
+
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.0.0/webfont/tabler-icons.min.css">
+
+  <style>
+    /* ── Reset & tokens ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --au-red: #C8102E;
+      --au-navy: #001F5B;
+      --au-gold: #B8965A;
+      --au-caramel: #C4855A;
+
+      /* light mode */
+      --color-background-primary: #ffffff;
+      --color-background-secondary: #f5f5f7;
+      --color-text-primary: #1a1a1a;
+      --color-text-secondary: #555;
+      --color-text-tertiary: #999;
+      --color-border-tertiary: #e0e0e0;
+      --color-border-secondary: #ccc;
+      --border-radius-lg: 14px;
+      --border-radius-md: 10px;
+
+      /* safe area for notch/home bar */
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-background-primary: #1c1c1e;
+        --color-background-secondary: #2c2c2e;
+        --color-text-primary: #f2f2f7;
+        --color-text-secondary: #aeaeb2;
+        --color-text-tertiary: #636366;
+        --color-border-tertiary: #3a3a3c;
+        --color-border-secondary: #48484a;
+      }
+    }
+
+    /* ── App chrome ── */
+    html, body {
+      height: 100%;
+      background: var(--au-navy);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      padding-top: var(--sat);
+    }
+
+    /* ── Install banner ── */
+    #install-banner {
+      display: none;
+      background: var(--au-gold);
+      color: var(--au-navy);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #install-banner.show { display: flex; }
+    #install-banner button {
+      background: var(--au-navy);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    #install-banner .dismiss {
+      background: transparent;
+      color: var(--au-navy);
+      font-size: 18px;
+      padding: 0 4px;
+    }
+
+    /* ── Scroll container ── */
+    .app-scroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(var(--sab) + 8px);
+    }
+
+    /* ── Card shell ── */
+    .shell {
+      max-width: 420px;
+      margin: 0 auto;
+      background: var(--color-background-primary);
+      font-size: 14px;
+      min-height: 100%;
+    }
+
+    /* ── Header ── */
+    .hdr {
+      background: var(--au-navy);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .hdr-badge {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--au-red);
+      border: 2px solid var(--au-gold);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .hdr-badge svg { width: 24px; height: 24px; }
+    .hdr-txt h1 { font-size: 14px; font-weight: 500; color: #fff; }
+    .hdr-txt p  { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 1px; }
+    .hdr-pill {
+      margin-left: auto;
+      background: var(--au-gold);
+      color: var(--au-navy);
+      font-size: 10px; font-weight: 500;
+      padding: 3px 8px; border-radius: 20px;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 0.5px solid var(--color-border-tertiary);
+      background: var(--color-background-primary);
+      position: sticky;
+      top: 68px;
+      z-index: 9;
+    }
+    .tabs button {
+      flex: 1; padding: 9px 4px; font-size: 11px;
+      background: none; border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      transition: color 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .tabs button i { font-size: 17px; }
+    .tabs button.active { color: var(--au-red); border-bottom-color: var(--au-red); }
+    .notif-dot {
+      position: absolute; top: 6px; right: 18px;
+      width: 7px; height: 7px;
+      background: var(--au-red); border-radius: 50%;
+      border: 1.5px solid var(--color-background-primary);
+    }
+
+    /* ── Pages ── */
+    .pg { display: none; padding: 12px; }
+    .pg.active { display: block; }
+    .slabel {
+      font-size: 10px; font-weight: 500;
+      color: var(--au-caramel);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    /* Finals banner */
+    .finals-banner {
+      background: var(--au-navy); border-radius: var(--border-radius-md);
+      padding: 10px 14px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .finals-pill {
+      background: var(--au-gold); color: var(--au-navy);
+      font-size: 10px; font-weight: 500;
+      padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+    }
+    .finals-txt { font-size: 12px; color: rgba(255,255,255,0.8); line-height: 1.4; }
+
+    /* Sold out banner */
+    .soldout-banner {
+      background: #EAF3DE; border-radius: var(--border-radius-md);
+      padding: 8px 12px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .soldout-banner i { color: #3B6D11; font-size: 14px; flex-shrink: 0; }
+    .soldout-banner p { font-size: 12px; color: #3B6D11; font-weight: 500; }
+
+    /* Match card */
+    .mcard {
+      background: var(--color-background-primary);
+      border: 0.5px solid var(--color-border-tertiary);
+      border-radius: var(--border-radius-lg);
+      padding: 12px 14px; margin-bottom: 8px;
+    }
+    .mcard.tonight  { border-color: var(--au-red);  border-width: 1.5px; }
+    .mcard.leg1done { border-color: var(--au-gold); border-width: 1.5px; }
+    .mhdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .mcomp {
+      font-size: 10px; color: var(--color-text-tertiary);
+      background: var(--color-background-secondary);
+      padding: 2px 7px; border-radius: 20px;
+    }
+    .mcomp.finals { background: #fdf0f2; color: var(--au-red); }
+    .mbadge { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; }
+    .badge-tonight { background: var(--au-red); color: #fff; }
+    .badge-w { background: #EAF3DE; color: #3B6D11; }
+    .badge-l { background: #FCEBEB; color: #A32D2D; }
+    .badge-d { background: #FAEEDA; color: #854F0B; }
+    .mteams { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .team { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+    .tlogo {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 500;
+    }
+    .tlogo-au  { background: #fdf0f2; color: var(--au-red); border: 1.5px solid var(--au-red); }
+    .tlogo-opp { background: var(--color-background-secondary); color: var(--color-text-secondary); border: 0.5px solid var(--color-border-tertiary); }
+    .tname  { font-size: 10px; font-weight: 500; text-align: center; color: var(--color-text-primary); }
+    .mvs    { font-size: 12px; color: var(--color-text-tertiary); }
+    .mscore { font-size: 22px; font-weight: 500; color: var(--color-text-primary); letter-spacing: 1px; }
+    .minfo  {
+      margin-top: 8px; padding-top: 8px;
+      border-top: 0.5px solid var(--color-border-tertiary);
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .minfo span { font-size: 11px; color: var(--color-text-secondary); display: flex; align-items: center; gap: 3px; }
+    .minfo i { font-size: 12px; }
+    .scorers { margin-top: 6px; font-size: 11px; color: var(--color-text-secondary); line-height: 1.5; }
+    .scorer-team { display: flex; align-items: flex-start; gap: 6px; }
+    .scorer-badge { font-size: 9px; font-weight: 500; padding: 1px 5px; border-radius: 3px; white-space: nowrap; margin-top: 1px; }
+    .sb-au  { background: #fdf0f2; color: var(--au-red); }
+    .sb-opp { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+    .tkt-btn {
+      margin-top: 8px; width: 100%; background: var(--au-red); color: #fff;
+      border: none; border-radius: var(--border-radius-md); padding: 8px;
+      font-size: 12px; font-weight: 500; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      transition: opacity 0.15s;
+    }
+    .tkt-btn:hover { opacity: 0.85; }
+    .tkt-btn.navy { background: var(--au-navy); }
+    .tkt-btn.disabled { background: var(--color-text-tertiary); cursor: not-allowed; opacity: 0.6; }
+
+    /* Stats */
+    .stat-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-bottom: 10px; }
+    .stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px; text-align: center; }
+    .stat-n { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+    .stat-l { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+    .form-dots { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+    .fd { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; }
+    .fd-w { background: #EAF3DE; color: #3B6D11; }
+    .fd-l { background: #FCEBEB; color: #A32D2D; }
+    .fd-d { background: #FAEEDA; color: #854F0B; }
+    .news-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; margin-bottom: 8px; }
+    .news-img { height: 64px; display: flex; align-items: center; justify-content: center; }
+    .news-img i { font-size: 26px; color: rgba(255,255,255,0.4); }
+    .news-body { padding: 8px 12px; }
+    .news-body h3 { font-size: 12px; font-weight: 500; color: var(--color-text-primary); line-height: 1.4; }
+    .news-body p  { font-size: 10px; color: var(--color-text-secondary); margin-top: 3px; }
+
+    /* Tickets */
+    .tkt-hero { background: var(--au-navy); border-radius: var(--border-radius-md); padding: 14px; color: #fff; margin-bottom: 10px; }
+    .tkt-hero h2 { font-size: 14px; font-weight: 500; }
+    .tkt-hero p  { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 3px; }
+    .tkt-hero-info { margin-top: 8px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .tkt-hero-info span { font-size: 11px; color: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 4px; }
+    .soldout-box { background: #FAEEDA; border-radius: var(--border-radius-md); padding: 16px; text-align: center; margin-bottom: 10px; }
+    .soldout-box h3 { font-size: 16px; font-weight: 500; color: #854F0B; margin-bottom: 6px; }
+    .soldout-box p  { font-size: 12px; color: #854F0B; line-height: 1.5; }
+    .waitlist-btn { margin-top: 12px; width: 100%; background: #854F0B; color: #fff; border: none; border-radius: var(--border-radius-md); padding: 10px; font-size: 12px; font-weight: 500; cursor: pointer; }
+
+    /* Alerts */
+    .sub-banner { background: var(--au-red); border-radius: var(--border-radius-md); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+    .sub-banner p    { font-size: 12px; color: #fff; font-weight: 500; }
+    .sub-banner span { font-size: 10px; color: rgba(255,255,255,0.7); }
+    .sub-btn { background: #fff; color: var(--au-red); border: none; border-radius: var(--border-radius-md); padding: 6px 12px; font-size: 11px; font-weight: 500; cursor: pointer; flex-shrink: 0; }
+    .pref-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 12px; margin-bottom: 8px; }
+    .pref-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+    .pref-row:last-child  { border-bottom: none; padding-bottom: 0; }
+    .pref-row:first-child { padding-top: 0; }
+    .pref-label { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+    .pref-desc  { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+    .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .tslider { position: absolute; inset: 0; background: var(--color-border-secondary); border-radius: 10px; cursor: pointer; transition: 0.2s; }
+    .tslider::before { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: 0.2s; }
+    .toggle input:checked + .tslider { background: var(--au-red); }
+    .toggle input:checked + .tslider::before { transform: translateX(16px); }
+    .pill-tag { display: inline-flex; align-items: center; gap: 3px; background: #EAF3DE; color: #3B6D11; border-radius: 20px; padding: 2px 7px; font-size: 10px; font-weight: 500; margin-right: 3px; margin-top: 4px; }
+    .cal-notice { background: #e8edf8; border-radius: var(--border-radius-md); padding: 8px 10px; display: flex; gap: 6px; align-items: flex-start; margin-top: 8px; }
+    .cal-notice i { color: var(--au-navy); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .cal-notice p { font-size: 11px; color: #001F5B; line-height: 1.5; }
+    .agg-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--au-navy); color: #fff; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500; margin-top: 4px; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: calc(12px + var(--sab)); left: 50%; transform: translateX(-50%);
+      background: #001F5B; color: #fff; padding: 8px 16px;
+      border-radius: 20px; font-size: 12px; opacity: 0;
+      transition: opacity 0.3s; z-index: 99; white-space: nowrap; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+
+    /* Offline badge */
+    #offline-bar {
+      display: none; background: #854F0B; color: #fff;
+      text-align: center; padding: 6px; font-size: 12px; font-weight: 500;
+    }
+    #offline-bar.show { display: block; }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+  <!-- Install prompt (Android/Chrome) -->
+  <div id="install-banner">
+    <span>📲 Add to your home screen for quick access!</span>
+    <div style="display:flex;gap:6px">
+      <button id="install-btn">Install</button>
+      <button class="dismiss" id="dismiss-btn">✕</button>
+    </div>
+  </div>
+
+  <!-- Offline indicator -->
+  <div id="offline-bar">⚡ You're offline — showing cached data</div>
+
+  <div class="app-scroll">
+    <div class="shell">
+
+      <!-- Header -->
+      <div class="hdr">
+        <div class="hdr-badge">
+          <svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" fill="#C8102E" stroke="#B8965A" stroke-width="2"/><text x="20" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff" font-family="sans-serif">AU</text></svg>
+        </div>
+        <div class="hdr-txt">
+          <h1>Never Miss A Match</h1>
+          <p>Adelaide United FC</p>
+        </div>
+        <span class="hdr-pill">Free</span>
+      </div>
+
+      <!-- Tabs -->
+      <nav class="tabs" role="tablist">
+        <button class="active" onclick="showTab('fixtures',this)" role="tab">
+          <i class="ti ti-calendar-event" aria-hidden="true"></i>Fixtures
+        </button>
+        <button onclick="showTab('stats',this)" role="tab">
+          <i class="ti ti-chart-bar" aria-hidden="true"></i>Stats
+        </button>
+        <button onclick="showTab('tickets',this)" role="tab">
+          <i class="ti ti-ticket" aria-hidden="true"></i>Tickets
+        </button>
+        <button onclick="showTab('alerts',this)" role="tab" style="position:relative">
+          <i class="ti ti-bell" aria-hidden="true"></i>Alerts
+          <span class="notif-dot"></span>
+        </button>
+      </nav>
+
+      <!-- FIXTURES -->
+      <div id="tab-fixtures" class="pg active">
+        <div class="finals-banner">
+          <span class="finals-pill">🏆 Semi-Finals</span>
+          <p class="finals-txt">Aggregate: <strong style="color:#fff">1–1</strong> · Leg 2 at Coopers is <strong style="color:var(--au-gold)">TONIGHT</strong></p>
+        </div>
+        <div class="soldout-banner">
+          <i class="ti ti-check" aria-hidden="true"></i>
+          <p>Coopers Stadium SOLD OUT — 16,500+ Reds fans tonight!</p>
+        </div>
+        <p class="slabel">Tonight — Leg 2</p>
+        <div class="mcard tonight">
+          <div class="mhdr">
+            <span class="mcomp finals">A-League Semi-Final</span>
+            <span class="mbadge badge-tonight">🔴 TONIGHT</span>
+          </div>
+          <div class="mteams">
+            <div class="team">
+              <div class="tlogo tlogo-au">AU</div>
+              <div class="tname">Adelaide<br>United</div>
+            </div>
+            <div style="text-align:center">
+              <div class="mvs">vs</div>
+              <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">Leg 2</div>
+            </div>
+            <div class="team">
+              <div class="tlogo tlogo-opp">AKL</div>
+              <div class="tname">Auckland<br>FC</div>
+            </div>
+          </div>
+          <div style="text-align:center;margin-top:6px">
+            <span class="agg-badge"><i class="ti ti-sum" aria-hidden="true" style="font-size:11px"></i>Agg: 1–1 · Winner to Grand Final</span>
+          </div>
+          <div class="minfo">
+            <span><i class="ti ti-calendar" aria-hidden="true"></i>Fri 15 May 2026</span>
+            <span><i class="ti ti-clock" aria-hidden="true"></i>7:35 PM ACST</span>
+            <span><i class="ti ti-map-pin" aria-hidden="true"></i>Coopers Stadium</span>
+          </div>
+          <button class="tkt-btn disabled" disabled><i class="ti ti-ticket" aria-hidden="true"></i> SOLD OUT</button>
+        </div>
+
+        <p class="slabel" style="margin-top:10px">Leg 1 result</p>
+        <div class="mcard leg1done">
+          <div class="mhdr">
+            <span class="mcomp finals">A-League Semi-Final · Leg 1</span>
+            <span class="mbadge badge-d">D</span>
+          </div>
+          <div class="mteams">
+            <div class="team"><div class="tlogo tlogo-opp">AKL</div><div class="tname">Auckland<br>FC</div></div>
+            <span class="mscore">1 – 1</span>
+            <div class="team"><div class="tlogo tlogo-au">AU</div><div class="tname">Adelaide<br>United</div></div>
+          </div>
+          <div class="scorers">
+            <div class="scorer-team" style="margin-bottom:3px"><span class="scorer-badge sb-opp">AKL</span><span>Brook 24'</span></div>
+            <div class="scorer-team"><span class="scorer-badge sb-au">AU</span><span>Crawford 64' (Dukuly assist)</span></div>
+          </div>
+          <div class="minfo">
+            <span><i class="ti ti-calendar" aria-hidden="true"></i>Sat 9 May 2026</span>
+            <span><i class="ti ti-map-pin" aria-hidden="true"></i>Go Media Stadium, NZ</span>
+          </div>
+        </div>
+
+        <p class="slabel" style="margin-top:10px">Recent regular season</p>
+        <div class="mcard">
+          <div class="mhdr"><span class="mcomp">A-League Men · R26</span><span class="mbadge badge-w">W</span></div>
+          <div class="mteams">
+            <div class="team"><div class="tlogo tlogo-opp">MVC</div><div class="tname">Melbourne City</div></div>
+            <span class="mscore" style="font-size:18px">1 – 2</span>
+            <div class="team"><div class="tlogo tlogo-au">AU</div><div class="tname">Adelaide</div></div>
+          </div>
+          <div class="scorers"><span class="scorer-badge sb-au" style="font-size:9px">AU</span> Jovanovic 90+8' (winner)</div>
+          <div class="minfo"><span><i class="ti ti-calendar" aria-hidden="true"></i>26 Apr 2026</span><span><i class="ti ti-map-pin" aria-hidden="true"></i>AAMI Park</span></div>
+        </div>
+        <div class="mcard">
+          <div class="mhdr"><span class="mcomp">A-League Men · R25</span><span class="mbadge badge-w">W</span></div>
+          <div class="mteams">
+            <div class="team"><div class="tlogo tlogo-au">AU</div><div class="tname">Adelaide</div></div>
+            <span class="mscore" style="font-size:18px">3 – 1</span>
+            <div class="team"><div class="tlogo tlogo-opp">MAC</div><div class="tname">Macarthur</div></div>
+          </div>
+          <div class="minfo"><span><i class="ti ti-calendar" aria-hidden="true"></i>19 Apr 2026</span><span><i class="ti ti-map-pin" aria-hidden="true"></i>Coopers Stadium</span></div>
+        </div>
+        <div class="mcard">
+          <div class="mhdr"><span class="mcomp">A-League Men · R24</span><span class="mbadge badge-d">D</span></div>
+          <div class="mteams">
+            <div class="team"><div class="tlogo tlogo-opp">NEW</div><div class="tname">Newcastle Jets</div></div>
+            <span class="mscore" style="font-size:18px">1 – 1</span>
+            <div class="team"><div class="tlogo tlogo-au">AU</div><div class="tname">Adelaide</div></div>
+          </div>
+          <div class="minfo"><span><i class="ti ti-calendar" aria-hidden="true"></i>11 Apr 2026</span><span><i class="ti ti-map-pin" aria-hidden="true"></i>McDonald Jones</span></div>
+        </div>
+        <div class="mcard">
+          <div class="mhdr"><span class="mcomp">A-League Men · R23</span><span class="mbadge badge-d">D</span></div>
+          <div class="mteams">
+            <div class="team"><div class="tlogo tlogo-au">AU</div><div class="tname">Adelaide</div></div>
+            <span class="mscore" style="font-size:18px">1 – 1</span>
+            <div class="team"><div class="tlogo tlogo-opp">AKL</div><div class="tname">Auckland FC</div></div>
+          </div>
+          <div class="minfo"><span><i class="ti ti-calendar" aria-hidden="true"></i>3 Apr 2026</span><span><i class="ti ti-map-pin" aria-hidden="true"></i>Coopers Stadium</span></div>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div id="tab-stats" class="pg">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-n">2nd</div><div class="stat-l">Regular season</div></div>
+          <div class="stat-card"><div class="stat-n">46</div><div class="stat-l">Goals scored</div></div>
+          <div class="stat-card"><div class="stat-n">11</div><div class="stat-l">Jovanovic goals</div></div>
+          <div class="stat-card"><div class="stat-n">43</div><div class="stat-l">Season points</div></div>
+        </div>
+        <p class="slabel">Form (last 6 incl. finals)</p>
+        <div class="pref-card" style="margin-bottom:10px">
+          <div class="form-dots">
+            <div class="fd fd-d">D</div><div class="fd fd-w">W</div><div class="fd fd-w">W</div>
+            <div class="fd fd-d">D</div><div class="fd fd-d">D</div><div class="fd fd-w">W</div>
+            <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:4px">← most recent</span>
+          </div>
+        </div>
+        <p class="slabel">Latest news</p>
+        <div class="news-card">
+          <div class="news-img" style="background:linear-gradient(135deg,#001F5B,#C8102E)"><i class="ti ti-trophy" aria-hidden="true"></i></div>
+          <div class="news-body"><h3>Coopers sold out for tonight's decider — 16,500 Reds fans set for epic semi</h3><p>15 May 2026 · Semi-Final Leg 2</p></div>
+        </div>
+        <div class="news-card">
+          <div class="news-img" style="background:linear-gradient(135deg,#3B6D11,#001F5B)"><i class="ti ti-run" aria-hidden="true"></i></div>
+          <div class="news-body"><h3>Jovanovic returns from suspension — available for Leg 2 tonight</h3><p>14 May 2026 · Team News</p></div>
+        </div>
+        <div class="news-card">
+          <div class="news-img" style="background:linear-gradient(135deg,#854F0B,#C8102E)"><i class="ti ti-alert-triangle" aria-hidden="true"></i></div>
+          <div class="news-body"><h3>Crawford &amp; Dukuly: the duo who saved Adelaide in Auckland</h3><p>10 May 2026 · Match Analysis</p></div>
+        </div>
+        <div class="news-card">
+          <div class="news-img" style="background:linear-gradient(135deg,#001F5B,#6B4226)"><i class="ti ti-first-aid-kit" aria-hidden="true"></i></div>
+          <div class="news-body"><h3>Auckland's May &amp; Howieson injury doubts ahead of Adelaide trip</h3><p>12 May 2026 · Opposition News</p></div>
+        </div>
+      </div>
+
+      <!-- TICKETS -->
+      <div id="tab-tickets" class="pg">
+        <div class="tkt-hero">
+          <h2>Adelaide United vs Auckland FC</h2>
+          <p>A-League Semi-Final · Leg 2 — Winner to Grand Final</p>
+          <div class="tkt-hero-info">
+            <span><i class="ti ti-calendar" aria-hidden="true"></i>Fri 15 May 2026</span>
+            <span><i class="ti ti-clock" aria-hidden="true"></i>7:35 PM ACST</span>
+            <span><i class="ti ti-map-pin" aria-hidden="true"></i>Coopers Stadium</span>
+          </div>
+        </div>
+        <div class="soldout-box">
+          <h3>SOLD OUT</h3>
+          <p>All 16,500 tickets have been claimed for tonight's blockbuster semi-final. This is the biggest Coopers crowd of the season!</p>
+          <p style="margin-top:8px">Join the waitlist below — you'll be notified if any tickets are released.</p>
+          <button class="waitlist-btn" onclick="joinWaitlist()">Join Waitlist</button>
+        </div>
+        <div class="pref-card">
+          <div class="pref-row" style="padding-top:0">
+            <div><div class="pref-label">Watch live — Paramount+</div><div class="pref-desc">Stream every minute. Coverage from 7:00 PM ACST.</div></div>
+            <button onclick="showToast('Opening Paramount+ stream...')" style="background:var(--au-navy);color:#fff;border:none;border-radius:var(--border-radius-md);padding:6px 12px;font-size:11px;cursor:pointer;flex-shrink:0">Watch</button>
+          </div>
+          <div class="pref-row">
+            <div><div class="pref-label">Next home game tickets</div><div class="pref-desc">Grand Final — if Adelaide qualify tonight</div></div>
+            <button onclick="showToast('Grand Final tickets on sale if Reds qualify!')" style="background:var(--au-red);color:#fff;border:none;border-radius:var(--border-radius-md);padding:6px 12px;font-size:11px;cursor:pointer;flex-shrink:0">Alert me</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTS -->
+      <div id="tab-alerts" class="pg">
+        <div class="sub-banner">
+          <div><p>Free subscription active</p><span>All finals fixtures synced</span></div>
+          <button class="sub-btn"><i class="ti ti-check" aria-hidden="true"></i> Active</button>
+        </div>
+        <p class="slabel">Calendar access</p>
+        <div class="pref-card">
+          <div class="pref-row">
+            <div>
+              <div class="pref-label"><i class="ti ti-calendar" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:3px;color:var(--au-red)"></i>Add to Calendar</div>
+              <div class="pref-desc">Auto-add all fixtures to your calendar</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked onchange="handleToggle(this,'Calendar')"><span class="tslider"></span></label>
+          </div>
+          <div>
+            <p class="pref-desc" style="margin-top:4px">Reminders set for each game:</p>
+            <div>
+              <span class="pill-tag"><i class="ti ti-clock" aria-hidden="true" style="font-size:11px"></i>1 week</span>
+              <span class="pill-tag"><i class="ti ti-clock" aria-hidden="true" style="font-size:11px"></i>1 day</span>
+              <span class="pill-tag"><i class="ti ti-clock" aria-hidden="true" style="font-size:11px"></i>3 hours</span>
+            </div>
+          </div>
+          <div class="cal-notice">
+            <i class="ti ti-info-circle" aria-hidden="true"></i>
+            <p>Tonight's semi-final Leg 2 and any Grand Final are already in your calendar.</p>
+          </div>
+        </div>
+        <p class="slabel">SMS notifications</p>
+        <div class="pref-card">
+          <div class="pref-row">
+            <div><div class="pref-label"><i class="ti ti-message" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:3px;color:var(--au-red)"></i>SMS reminders</div><div class="pref-desc">Game day text alerts</div></div>
+            <label class="toggle"><input type="checkbox" id="sms-toggle" onchange="handleSmsToggle(this)"><span class="tslider"></span></label>
+          </div>
+          <div id="sms-section" style="display:none;margin-top:6px">
+            <input type="tel" id="phone-input" placeholder="+61 4XX XXX XXX" style="width:100%;padding:8px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px;margin-bottom:6px">
+            <button onclick="savePhone()" style="background:var(--au-navy);color:#fff;border:none;border-radius:var(--border-radius-md);padding:7px 14px;font-size:12px;cursor:pointer">Save number</button>
+          </div>
+        </div>
+        <p class="slabel">Push notifications</p>
+        <div class="pref-card">
+          <div class="pref-row">
+            <div><div class="pref-label"><i class="ti ti-bell" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:3px;color:var(--au-red)"></i>Match day alerts</div><div class="pref-desc">Kick-off, team news &amp; location</div></div>
+            <label class="toggle"><input type="checkbox" checked onchange="handleToggle(this,'Match day alerts')"><span class="tslider"></span></label>
+          </div>
+          <div class="pref-row">
+            <div><div class="pref-label"><i class="ti ti-ticket" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:3px;color:var(--au-red)"></i>Ticket availability</div><div class="pref-desc">Alerts when tickets drop</div></div>
+            <label class="toggle"><input type="checkbox" checked onchange="handleToggle(this,'Ticket alerts')"><span class="tslider"></span></label>
+          </div>
+          <div class="pref-row">
+            <div><div class="pref-label"><i class="ti ti-chart-bar" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:3px;color:var(--au-red)"></i>Live stats &amp; goals</div><div class="pref-desc">Real-time updates tonight</div></div>
+            <label class="toggle"><input type="checkbox" onchange="handleToggle(this,'Live stats')"><span class="tslider"></span></label>
+          </div>
+          <div class="pref-row">
+            <div><div class="pref-label"><i class="ti ti-news" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:3px;color:var(--au-red)"></i>Grand Final alert</div><div class="pref-desc">Notify me if Adelaide qualify</div></div>
+            <label class="toggle"><input type="checkbox" checked onchange="handleToggle(this,'Grand Final alert')"><span class="tslider"></span></label>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- .shell -->
+  </div><!-- .app-scroll -->
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── Tab navigation ──
+    function showTab(name, btn) {
+      document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // ── Interactions ──
+    function handleToggle(el, name) { showToast((el.checked ? '✅ ' : '🔕 ') + name + (el.checked ? ' enabled' : ' disabled')); }
+    function handleSmsToggle(el) { document.getElementById('sms-section').style.display = el.checked ? 'block' : 'none'; }
+    function savePhone() { const v = document.getElementById('phone-input').value.trim(); if (!v) return; showToast('📱 Number saved! SMS alerts active.'); }
+    function joinWaitlist() { showToast("✅ Added to waitlist — we'll SMS you if tickets drop!"); }
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ── Service Worker ──
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(console.warn);
+    }
+
+    // ── Install prompt (Android/Chrome) ──
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('install-banner').classList.add('show');
+    });
+    document.getElementById('install-btn').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('install-banner').classList.remove('show');
+      if (outcome === 'accepted') showToast('✅ App installed!');
+    });
+    document.getElementById('dismiss-btn').addEventListener('click', () => {
+      document.getElementById('install-banner').classList.remove('show');
+    });
+
+    // ── Offline indicator ──
+    function updateOnlineStatus() {
+      document.getElementById('offline-bar').classList.toggle('show', !navigator.onLine);
+    }
+    window.addEventListener('online',  updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+  </script>
+</body>
+</html>
